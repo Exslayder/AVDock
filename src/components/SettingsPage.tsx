@@ -4,8 +4,17 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 
 import { api } from "../lib/api";
 import { useI18n } from "../lib/i18n";
-import type { AppInfo, BinariesInfo, Settings, UpdateReport, YtdlpStatus } from "../lib/types";
+import type {
+  AppInfo,
+  BinariesInfo,
+  Lang,
+  Settings,
+  Theme,
+  UpdateReport,
+  YtdlpStatus,
+} from "../lib/types";
 import { IconExternal, IconFolder, IconRefresh } from "./Icons";
+import { RubberSegmented } from "./RubberSegmented";
 
 type Notify = (message: string, kind?: "info" | "error" | "success") => void;
 
@@ -37,7 +46,7 @@ export function SettingsPage({
   const localYtdlp = report?.ytdlpCurrent ?? binaries?.ytdlpVersion ?? ytdlp.version ?? null;
   const latestYtdlp = report?.ytdlpLatest ?? null;
   const ytdlpOutdated = Boolean(latestYtdlp && latestYtdlp !== localYtdlp);
-  const appVersion = report?.appCurrent ?? appInfo?.version ?? "0.1.0";
+  const appVersion = report?.appCurrent ?? appInfo?.version ?? "0.2.0";
   const appOutdated = Boolean(report?.appLatest);
 
   async function pickFolder(kind: "audioPath" | "videoPath") {
@@ -132,51 +141,31 @@ export function SettingsPage({
 
       <section className="card settings-card">
         <h2>{t("set.language")}</h2>
-        <div className="segmented">
-          <button
-            type="button"
-            className={lang === "ru" ? "active" : ""}
-            onClick={() => void changeLanguage("ru")}
-          >
-            Русский
-          </button>
-          <button
-            type="button"
-            className={lang === "en" ? "active" : ""}
-            onClick={() => void changeLanguage("en")}
-          >
-            English
-          </button>
-        </div>
+        <RubberSegmented<Lang>
+          options={[
+            { value: "ru", label: "Русский" },
+            { value: "en", label: "English" },
+          ]}
+          value={lang}
+          onChange={(value) => void changeLanguage(value)}
+          ariaLabel={t("set.language")}
+        />
       </section>
 
       <section className="card settings-card">
         <h2>{t("set.appearance")}</h2>
         <div className="tool-row">
           <span className="tool-name">{t("set.theme")}</span>
-          <div className="segmented">
-            <button
-              type="button"
-              className={settings.theme === "system" ? "active" : ""}
-              onClick={() => void onSave({ ...settings, theme: "system" })}
-            >
-              {t("set.themeSystem")}
-            </button>
-            <button
-              type="button"
-              className={settings.theme === "light" ? "active" : ""}
-              onClick={() => void onSave({ ...settings, theme: "light" })}
-            >
-              {t("set.themeLight")}
-            </button>
-            <button
-              type="button"
-              className={settings.theme === "dark" ? "active" : ""}
-              onClick={() => void onSave({ ...settings, theme: "dark" })}
-            >
-              {t("set.themeDark")}
-            </button>
-          </div>
+          <RubberSegmented<Theme>
+            options={[
+              { value: "system", label: t("set.themeSystem") },
+              { value: "light", label: t("set.themeLight") },
+              { value: "dark", label: t("set.themeDark") },
+            ]}
+            value={settings.theme}
+            onChange={(value) => void onSave({ ...settings, theme: value })}
+            ariaLabel={t("set.theme")}
+          />
         </div>
       </section>
 
@@ -273,7 +262,7 @@ export function SettingsPage({
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={() => void openUrl("https://github.com/Exslayder")}
+            onClick={() => void openUrl("https://github.com/Exslayder/AVDock")}
           >
             <IconExternal size={15} />
             {t("set.github")}

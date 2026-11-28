@@ -154,7 +154,7 @@ pub fn ready_status(app: &AppHandle) -> YtdlpStatus {
     if path.is_file() {
         YtdlpStatus {
             state: "ready".into(),
-            version: ytdlp_version(&path),
+            version: None,
             percent: None,
             error: None,
         }

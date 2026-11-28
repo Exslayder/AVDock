@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { animate, svg } from "animejs";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -6,9 +7,16 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 import { useI18n } from "../lib/i18n";
 import { baseName, humanizeError } from "../lib/format";
-import type { ConvertProgress, ConvertTarget } from "../lib/types";
-import { Meter } from "./Meter";
-import { IconAlert, IconFilm, IconFolder, IconMusic, IconSliders, IconX } from "./Icons";
+import type { ConversionRecord, ConvertProgress, ConvertTarget } from "../lib/types";
+import {
+  IconAlert,
+  IconDownload,
+  IconFilm,
+  IconFolder,
+  IconMusic,
+  IconX,
+} from "./Icons";
+import { RubberSegmented, type RubberOption } from "./RubberSegmented";
 
 const videoTargets: ConvertTarget[] = ["mp4", "mkv", "webm", "mov"];
 const audioTargets: ConvertTarget[] = ["mp3", "m4a", "wav"];
@@ -33,10 +41,16 @@ const mediaExtensions = [
 
 const mediaPattern = new RegExp(`\\.(${mediaExtensions.join("|")})$`, "i");
 
+const RING_RADIUS = 54;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
 interface ConverterProps {
   convert: ConvertProgress | null;
+  history: ConversionRecord[];
   onStart: (file: string, target: ConvertTarget) => Promise<void>;
   onCancel: () => Promise<void>;
+  onDismiss: () => void;
+  onClearHistory: () => void;
 }
 
 function DoneMark() {
@@ -52,12 +66,12 @@ function DoneMark() {
   }, []);
 
   return (
-    <svg className="done-mark" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg className="drop-check" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         ref={pathRef}
         d="m4.5 12.5 4.5 4.5L19.5 6.5"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -65,17 +79,111 @@ function DoneMark() {
   );
 }
 
-export function Converter({ convert, onStart, onCancel }: ConverterProps) {
+function RollLine({ text, small = false }: { text: string; small?: boolean }) {
+  return (
+    <div className={`drop-line ${small ? "small" : ""}`}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={text}
+          initial={{ y: 16, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -16, opacity: 0 }}
+          transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+        >
+          {text}
+        </motion.span>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function Converter({
+  convert,
+  history,
+  onStart,
+  onCancel,
+  onDismiss,
+  onClearHistory,
+}: ConverterProps) {
   const { t } = useI18n();
-  const [file, setFile] = useState<string | null>(null);
   const [target, setTarget] = useState<ConvertTarget>("mp4");
   const [dragging, setDragging] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [displayPercent, setDisplayPercent] = useState(0);
 
-  const running = convert?.running ?? false;
+  const handlers = useRef({ target, onStart });
+  handlers.current = { target, onStart };
+
+  const backendRunning = Boolean(convert?.running);
+  const backendDone = convert?.phase === "done";
   const progress = Math.max(0, Math.min(100, convert?.percent ?? 0));
 
-  const fileExtension = file?.split(".").pop()?.toLowerCase() ?? "";
-  const sameFormat = Boolean(file && fileExtension === target);
+  const hasError = Boolean(localError) || convert?.phase === "error";
+  const canceled = !hasError && convert?.phase === "canceled";
+  const finishingUp = !hasError && backendDone && displayPercent < 100;
+  const running = (backendRunning || finishingUp) && !hasError;
+  const done = !hasError && backendDone && displayPercent >= 100;
+  const errorText =
+    localError ?? (convert?.phase === "error" ? humanizeError(t, convert.error) : "");
+
+  // Step the displayed percentage by at most 1 per animation frame so the
+  // counter and ring always advance unit-by-unit (1, 2, 3… 100) without
+  // jumping by 10/20/30 when FFmpeg reports coarse progress chunks.
+  useEffect(() => {
+    if (hasError || canceled || (!backendRunning && !backendDone)) {
+      setDisplayPercent(0);
+      return;
+    }
+
+    const targetValue = backendDone ? 100 : progress;
+    if (displayPercent >= targetValue) {
+      return;
+    }
+
+    let frame = 0;
+    const tick = () => {
+      setDisplayPercent((previous) => {
+        const goal = backendDone ? 100 : progress;
+        const diff = goal - previous;
+        if (diff <= 0) return previous;
+        const step = Math.min(1, Math.max(0.25, diff * 0.12));
+        const next = previous + step;
+        return goal - next < 0.2 ? goal : next;
+      });
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [backendRunning, backendDone, progress, hasError, canceled, displayPercent]);
+
+  useEffect(() => {
+    if (!localError) return;
+    const timer = window.setTimeout(() => setLocalError(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [localError]);
+
+  useEffect(() => {
+    if (!convert) return;
+    if (!done && convert.phase !== "error" && convert.phase !== "canceled") {
+      return;
+    }
+    const timer = window.setTimeout(onDismiss, 6000);
+    return () => window.clearTimeout(timer);
+  }, [done, convert, onDismiss]);
+
+  async function startConversion(path: string) {
+    const { target: currentTarget, onStart: start } = handlers.current;
+    const extension = path.split(".").pop()?.toLowerCase() ?? "";
+
+    if (extension === currentTarget) {
+      setLocalError(t("conv.sameFormat"));
+      return;
+    }
+
+    setLocalError(null);
+    setDisplayPercent(0);
+    await start(path, currentTarget);
+  }
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -90,7 +198,7 @@ export function Converter({ convert, onStart, onCancel }: ConverterProps) {
         setDragging(false);
         if (payload.type === "drop") {
           const media = payload.paths.find((path) => mediaPattern.test(path));
-          if (media) setFile(media);
+          if (media && !convert?.running) void startConversion(media);
         }
       })
       .then((fn) => {
@@ -99,9 +207,11 @@ export function Converter({ convert, onStart, onCancel }: ConverterProps) {
       .catch(() => undefined);
 
     return () => unlisten?.();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convert?.running]);
 
   async function pick() {
+    if (running) return;
     const selected = await openDialog({
       multiple: false,
       directory: false,
@@ -115,7 +225,7 @@ export function Converter({ convert, onStart, onCancel }: ConverterProps) {
       ],
     });
     if (typeof selected === "string") {
-      setFile(selected);
+      await startConversion(selected);
     }
   }
 
@@ -141,6 +251,48 @@ export function Converter({ convert, onStart, onCancel }: ConverterProps) {
             ? t("conv.codecWav")
             : t("conv.codecH264");
 
+  const formatOptions: RubberOption<ConvertTarget>[] = [
+    ...videoTargets,
+    ...audioTargets,
+  ].map((value) => ({
+    value,
+    label: t(`conv.target.${value}`),
+    icon: audioTargets.includes(value) ? <IconMusic size={15} /> : <IconFilm size={15} />,
+  }));
+
+  let title: string;
+  let subtitle: string;
+
+  if (dragging) {
+    title = t("conv.dropActive");
+    subtitle = t("conv.dropHint");
+  } else if (hasError) {
+    title = t("status.error");
+    subtitle = errorText || t("conv.errorHint");
+  } else if (running) {
+    title = `${t("conv.converting")} ${baseName(convert?.file ?? "")}`.trim();
+    subtitle = [t(`conv.target.${target}`), phaseLabel].filter(Boolean).join(" · ");
+  } else if (done) {
+    title = t("conv.doneTitle");
+    subtitle = baseName(convert?.output ?? "");
+  } else if (canceled) {
+    title = t("status.canceled");
+    subtitle = t("conv.errorHint");
+  } else {
+    title = t("conv.dropTitle");
+    subtitle = t("conv.dropHint");
+  }
+
+  const zoneState = dragging
+    ? "dragging"
+    : hasError
+      ? "error"
+      : running
+        ? "running"
+        : done
+          ? "done"
+          : "";
+
   return (
     <div className="page">
       <header className="page-header">
@@ -150,141 +302,121 @@ export function Converter({ convert, onStart, onCancel }: ConverterProps) {
         </div>
       </header>
 
-      <section className="card">
-        <p className="section-label">{t("conv.file")}</p>
-
-        <div className={`file-picker ${dragging ? "dragging" : ""}`}>
-          <div className="file-icon">
-            <IconSliders size={18} />
-          </div>
-          <div className="file-info">
-            <span className="file-label">
-              {dragging ? t("conv.dropActive") : file ? t("conv.selected") : t("conv.drop")}
-            </span>
-            {file && <span className="file-name">{baseName(file)}</span>}
-          </div>
-          <button type="button" className="btn" onClick={() => void pick()} disabled={running}>
-            {t("conv.pick")}
-          </button>
-        </div>
-
+      <section className="card converter-format-card">
         <div className="convert-format">
           <div className="convert-format-head">
             <p className="section-label">{t("conv.format")}</p>
             <span className="muted small">{codecHint}</span>
           </div>
-          <div
-            className="format-select convert-targets"
-            role="radiogroup"
-            aria-label={t("conv.format")}
-          >
-            {[...videoTargets, ...audioTargets].map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={target === value}
-                className={`format-option ${target === value ? "selected" : ""}`}
-                onClick={() => setTarget(value)}
-                disabled={running}
-              >
-                {audioTargets.includes(value) ? (
-                  <IconMusic size={15} />
-                ) : (
-                  <IconFilm size={15} />
-                )}
-                {t(`conv.target.${value}`)}
-              </button>
-            ))}
-          </div>
+          <RubberSegmented<ConvertTarget>
+            className="convert-formats"
+            options={formatOptions}
+            value={target}
+            onChange={(value) => {
+              setTarget(value);
+              setLocalError(null);
+            }}
+            ariaLabel={t("conv.format")}
+            disabled={running}
+            stretch
+          />
+        </div>
+      </section>
+
+      <section
+        className={`drop-zone ${zoneState}`}
+        role="button"
+        tabIndex={0}
+        aria-label={title}
+        onClick={() => void pick()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            void pick();
+          }
+        }}
+      >
+        <div className="drop-core">
+          <svg className="drop-ring" viewBox="0 0 120 120" aria-hidden>
+            <circle className="drop-ring-track" cx="60" cy="60" r={RING_RADIUS} />
+            <circle
+              className="drop-ring-arc"
+              cx="60"
+              cy="60"
+              r={RING_RADIUS}
+              strokeDasharray={RING_LENGTH}
+              strokeDashoffset={RING_LENGTH * (1 - displayPercent / 100)}
+            />
+          </svg>
+
+          {running && !hasError ? (
+            <span className="drop-percent">{Math.round(displayPercent)}</span>
+          ) : done ? (
+            <DoneMark />
+          ) : hasError ? (
+            <IconAlert size={28} />
+          ) : (
+            <IconDownload size={30} />
+          )}
         </div>
 
-        <div className="converter-actions">
+        <div className="drop-lines">
+          <RollLine text={title} />
+          <RollLine text={subtitle} small />
+        </div>
+      </section>
+
+      {backendRunning && !hasError && (
+        <div className="drop-actions">
           <button
             type="button"
-            className="btn btn-primary"
-            disabled={!file || running || sameFormat}
-            onClick={() => file && void onStart(file, target)}
+            className="btn btn-danger"
+            onClick={(event) => {
+              event.stopPropagation();
+              void onCancel();
+            }}
           >
-            <IconFilm size={16} />
-            {t("conv.start")}
+            <IconX size={15} />
+            {t("conv.cancel")}
           </button>
-          {running && (
-            <button type="button" className="btn btn-danger" onClick={() => void onCancel()}>
-              <IconX size={15} />
-              {t("conv.cancel")}
-            </button>
-          )}
         </div>
+      )}
 
-        {sameFormat && !running && (
-          <p className="muted small convert-note">{t("conv.sameFormat")}</p>
-        )}
-
-        {convert &&
-          (running ||
-            convert.phase === "done" ||
-            convert.phase === "error" ||
-            convert.phase === "canceled") && (
-            <div className="convert-status">
-              <div className="convert-status-head">
-                <span className="converter-phase">
-                  <span
-                    className={`status-dot ${
-                      convert.phase === "error"
-                        ? "error"
-                        : convert.phase === "done"
-                          ? "done"
-                          : "active"
-                    }`}
-                  />
-                  {convert.phase === "done"
-                    ? t("conv.done")
-                    : convert.phase === "error"
-                      ? t("status.error")
-                      : convert.phase === "canceled"
-                        ? t("status.canceled")
-                        : phaseLabel}
+      {history.length > 0 && (
+        <section className="convert-history">
+          <div className="convert-history-head">
+            <h2>{t("conv.history")}</h2>
+            <button type="button" className="btn btn-ghost" onClick={onClearHistory}>
+              {t("conv.clearHistory")}
+            </button>
+          </div>
+          <ul className="history-list">
+            {history.map((item) => (
+              <li key={item.id} className="history-item">
+                <span className="history-icon">
+                  {audioTargets.includes(item.target) ? (
+                    <IconMusic size={16} />
+                  ) : (
+                    <IconFilm size={16} />
+                  )}
                 </span>
-                {running && <span className="queue-metric">{Math.round(progress)}%</span>}
-                {running && convert.speed && (
-                  <span className="queue-metric">{convert.speed}</span>
-                )}
-              </div>
-
-              {(running || convert.phase === "done") && <Meter value={progress} />}
-
-              {convert.phase === "done" && convert.output && (
-                <div className="convert-result">
-                  <DoneMark />
-                  <span className="file-name">{baseName(convert.output)}</span>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => void revealIteminDirSafe(convert.output!)}
-                  >
-                    <IconFolder size={14} />
-                    {t("conv.openFolder")}
-                  </button>
+                <div className="history-info">
+                  <span className="history-name">{item.name}</span>
+                  <span className="history-meta">{t(`conv.target.${item.target}`)}</span>
                 </div>
-              )}
-
-              {convert.phase === "error" && (
-                <div className="queue-error">
-                  <IconAlert size={14} /> {humanizeError(t, convert.error)}
-                </div>
-              )}
-            </div>
-          )}
-      </section>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => void revealItemInDir(item.path).catch(() => undefined)}
+                >
+                  <IconFolder size={14} />
+                  {t("conv.openFolder")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
-}
-
-async function revealIteminDirSafe(path: string) {
-  try {
-    await revealItemInDir(path);
-  } catch {
-    /* ignore */
-  }
 }

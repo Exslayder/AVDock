@@ -3,24 +3,27 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
 import { api, events } from "./lib/api";
-import { humanizeError } from "./lib/format";
+import { baseName, humanizeError } from "./lib/format";
 import { I18nProvider, translate } from "./lib/i18n";
 import type {
   AppInfo,
   AppUpdateStatus,
   BinariesInfo,
+  ConversionRecord,
   ConvertProgress,
   ConvertTarget,
   Lang,
   MediaKind,
+  Page,
   QueueItem,
   Settings,
   YtdlpStatus,
 } from "./lib/types";
-import { Sidebar, type Page } from "./components/Sidebar";
+import { TopNav } from "./components/TopNav";
 import { Downloads } from "./components/Downloads";
 import { Converter } from "./components/Converter";
 import { SettingsPage } from "./components/SettingsPage";
+import { YtdlpToast } from "./components/YtdlpToast";
 import { Meter } from "./components/Meter";
 import { IconAlert, IconCheck, IconLogo } from "./components/Icons";
 
@@ -31,14 +34,23 @@ interface Toast {
   kind: ToastKind;
 }
 
+// Covers every subset the UI renders: Latin, Cyrillic, digits and the
+// punctuation the Russian copy uses.
+const FONT_SAMPLE =
+  'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz 0123456789 АаБбВвГгДдЕеЁёЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЪъЫыЬьЭэЮюЯя —–…«»';
+
 export default function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [fontsReady, setFontsReady] = useState(false);
   const [page, setPage] = useState<Page>("downloads");
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [ytdlp, setYtdlp] = useState<YtdlpStatus>({ state: "missing" });
   const [binaries, setBinaries] = useState<BinariesInfo | null>(null);
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [convert, setConvert] = useState<ConvertProgress | null>(null);
+  const [history, setHistory] = useState<ConversionRecord[]>([]);
+  const lastTarget = useRef<ConvertTarget>("mp4");
+  const historyId = useRef(0);
   const [appUpdate, setAppUpdate] = useState<AppUpdateStatus | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
@@ -49,6 +61,48 @@ export default function App() {
     window.setTimeout(() => {
       setToasts((current) => current.filter((toast) => toast.id !== id));
     }, 4200);
+  }, []);
+
+  const dismissConvert = useCallback(() => setConvert(null), []);
+  const clearHistory = useCallback(() => setHistory([]), []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadFonts = async () => {
+      try {
+        if ("fonts" in document) {
+          // Without an explicit sample, FontFaceSet.load() only pulls the
+          // subset that contains a space (the Latin one). The interface is
+          // Cyrillic, so that face arrived after the first paint and the
+          // text visibly switched fonts. Ask for Latin + Cyrillic at once.
+          const specs = [
+            '400 16px "Geist Variable"',
+            '500 16px "Geist Variable"',
+            '600 16px "Geist Variable"',
+            '600 32px "Bricolage Grotesque Variable"',
+          ];
+          await Promise.allSettled(
+            specs.map((spec) => document.fonts.load(spec, FONT_SAMPLE)),
+          );
+
+          // load() can resolve before the set settles; wait for the rest.
+          const deadline = performance.now() + 3000;
+          while (document.fonts.status !== "loaded" && performance.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, 30));
+          }
+          await document.fonts.ready;
+        }
+      } catch {
+        /* fall through: show the app with fallback fonts */
+      }
+      if (!cancelled) setFontsReady(true);
+    };
+
+    void loadFonts();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const refreshBinaries = useCallback(async () => {
@@ -64,21 +118,22 @@ export default function App() {
     const unlisteners: UnlistenFn[] = [];
 
     (async () => {
-      const [initialSettings, initialQueue, initialYtdlp, initialBinaries, initialAppInfo] =
-        await Promise.all([
-          api.getSettings(),
-          api.getQueue(),
-          api.ytdlpState(),
-          api.getBinaries(),
-          api.appInfo(),
-        ]);
+      const [initialSettings, initialQueue, initialYtdlp, initialAppInfo] = await Promise.all([
+        api.getSettings(),
+        api.getQueue(),
+        api.ytdlpState(),
+        api.appInfo(),
+      ]);
       if (disposed) return;
+      document.documentElement.dataset.design = "reactbits";
       setSettings(initialSettings);
       setQueue(initialQueue);
       setYtdlp(initialYtdlp);
-      setBinaries(initialBinaries);
       setAppInfo(initialAppInfo);
       document.documentElement.lang = initialSettings.language;
+      // Version probing starts separate processes (yt-dlp takes about a second),
+      // so it must not delay the first paint.
+      void refreshBinaries();
 
       const listeners = await Promise.all([
         events.onQueue((items) => setQueue(items)),
@@ -86,7 +141,24 @@ export default function App() {
           setYtdlp(status);
           if (status.state === "ready") void refreshBinaries();
         }),
-        events.onConvert((progress) => setConvert(progress)),
+        events.onConvert((progress) => {
+          setConvert(progress);
+          if (progress.phase === "done" && progress.output) {
+            const path = progress.output;
+            const ext = path.split(".").pop()?.toLowerCase() as ConvertTarget | undefined;
+            const recordTarget = ext || lastTarget.current;
+            setHistory((current) => [
+              {
+                id: ++historyId.current,
+                name: baseName(path),
+                path,
+                target: recordTarget,
+                at: Date.now(),
+              },
+              ...current.filter((item) => item.path !== path),
+            ]);
+          }
+        }),
         events.onAppUpdate((status) => setAppUpdate(status)),
       ]);
       if (disposed) {
@@ -116,6 +188,7 @@ export default function App() {
       const resolved =
         settings.theme === "system" ? (media.matches ? "dark" : "light") : settings.theme;
       document.documentElement.dataset.theme = resolved;
+      document.documentElement.dataset.design = "reactbits";
       document.documentElement.style.colorScheme = resolved;
     };
 
@@ -124,7 +197,33 @@ export default function App() {
       media.addEventListener("change", apply);
       return () => media.removeEventListener("change", apply);
     }
-  }, [settings?.theme, settings]);
+  }, [settings]);
+
+  useEffect(() => {
+    let frame = 0;
+    let lastEvent: PointerEvent | null = null;
+
+    const handleMove = (event: PointerEvent) => {
+      lastEvent = event;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (!lastEvent) return;
+        const target = lastEvent.target as Element | null;
+        const card = target?.closest?.(".card, .queue-item, .history-item, .drop-zone");
+        if (!(card instanceof HTMLElement)) return;
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty("--rb-mx", `${lastEvent.clientX - rect.left}px`);
+        card.style.setProperty("--rb-my", `${lastEvent.clientY - rect.top}px`);
+      });
+    };
+
+    window.addEventListener("pointermove", handleMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
 
   const lang: Lang = settings?.language ?? "ru";
   const t = useCallback(
@@ -142,12 +241,14 @@ export default function App() {
     }
   }
 
-  async function handleEnqueue(urls: string[], kind: MediaKind) {
+  async function handleEnqueue(urls: string[], kind: MediaKind): Promise<boolean> {
     try {
       const ids = await api.enqueue(urls, kind);
       notify(t("toast.added", { count: ids.length }), "success");
+      return true;
     } catch (error) {
       notify(humanizeError(t, String(error)) || t("err.generic"), "error");
+      return false;
     }
   }
 
@@ -175,17 +276,16 @@ export default function App() {
     }
   }
 
-  async function handleInstallYtdlp() {
+  async function handleRetryYtdlp() {
     try {
-      const version = await api.installYtdlp();
-      notify(t("toast.ytdlpInstalled", { version }), "success");
-      await refreshBinaries();
-    } catch (error) {
-      notify(`${t("ytdlp.failed")}: ${error}`, "error");
+      await api.installYtdlp();
+    } catch {
+      /* the ytdlp-status event reports the failure in the notification */
     }
   }
 
   async function handleConvertStart(file: string, target: ConvertTarget) {
+    lastTarget.current = target;
     const phase =
       target === "webm"
         ? "vp9"
@@ -208,7 +308,7 @@ export default function App() {
     }
   }
 
-  if (!settings) {
+  if (!settings || !fontsReady) {
     return (
       <div className="splash">
         <span className="brand-mark">
@@ -228,11 +328,9 @@ export default function App() {
     <I18nProvider lang={settings.language} setLang={(next) => void persist({ ...settings, language: next })}>
       <MotionConfig reducedMotion="user">
       <div className="app">
-        <Sidebar
-          page={page}
-          onNavigate={setPage}
-          activeCount={activeCount}
-        />
+        <header className="topbar">
+          <TopNav page={page} onNavigate={setPage} activeCount={activeCount} />
+        </header>
         <main className="content">
           {appUpdate &&
             (appUpdate.phase === "downloading" || appUpdate.phase === "installing") && (
@@ -241,7 +339,7 @@ export default function App() {
                   {appUpdate.phase === "downloading"
                     ? t("update.downloading")
                     : t("update.installing")}
-                  {appUpdate.version ? ` В· v${appUpdate.version}` : ""}
+                  {appUpdate.version ? ` · v${appUpdate.version}` : ""}
                 </span>
                 <Meter value={appUpdate.percent ?? 0} />
               </div>
@@ -257,20 +355,21 @@ export default function App() {
               {page === "downloads" && (
                 <Downloads
                   queue={queue}
-                  ytdlp={ytdlp}
                   onEnqueue={handleEnqueue}
                   onCancel={handleCancel}
                   onRemove={handleRemove}
                   onClearFinished={handleClearFinished}
-                  onInstallYtdlp={handleInstallYtdlp}
                   notify={notify}
                 />
               )}
               {page === "converter" && (
                 <Converter
                   convert={convert}
+                  history={history}
                   onStart={handleConvertStart}
                   onCancel={handleConvertCancel}
+                  onDismiss={dismissConvert}
+                  onClearHistory={clearHistory}
                 />
               )}
               {page === "settings" && (
@@ -289,6 +388,7 @@ export default function App() {
         </main>
 
         <div className="toasts">
+          <YtdlpToast ytdlp={ytdlp} onRetry={handleRetryYtdlp} />
           <AnimatePresence initial={false}>
             {toasts.map((toast) => (
               <motion.div

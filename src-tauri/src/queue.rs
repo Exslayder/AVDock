@@ -29,6 +29,7 @@ pub fn spawn_worker(app: AppHandle) {
                     emit_queue(&app, &state, true);
                 }
                 None => {
+                    crate::paths::clean_tmp(&app);
                     let state = app.state::<AppState>();
                     state.wake.notified().await;
                 }

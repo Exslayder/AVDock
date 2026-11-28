@@ -1,5 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+﻿import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 
 import { useI18n } from "../lib/i18n";
@@ -12,11 +11,10 @@ import {
   humanizeError,
   parseWarn,
 } from "../lib/format";
-import type { MediaKind, QueueItem, YtdlpStatus } from "../lib/types";
+import type { MediaKind, QueueItem } from "../lib/types";
 import { SpeedChart } from "./SpeedChart";
 import { Meter } from "./Meter";
 import {
-  IconAlert,
   IconDownload,
   IconFilm,
   IconFolder,
@@ -24,17 +22,17 @@ import {
   IconTrash,
   IconX,
 } from "./Icons";
+import { RubberSegmented, type RubberOption } from "./RubberSegmented";
+import { LoadingSuccessButton } from "./LoadingSuccessButton";
 
 type Notify = (message: string, kind?: "info" | "error" | "success") => void;
 
 interface DownloadsProps {
   queue: QueueItem[];
-  ytdlp: YtdlpStatus;
-  onEnqueue: (urls: string[], kind: MediaKind) => Promise<void>;
+  onEnqueue: (urls: string[], kind: MediaKind) => Promise<boolean>;
   onCancel: (id: number) => Promise<void>;
   onRemove: (id: number) => Promise<void>;
   onClearFinished: () => Promise<void>;
-  onInstallYtdlp: () => Promise<void>;
   notify: Notify;
 }
 
@@ -56,12 +54,10 @@ function isSoundCloud(url: string): boolean {
 
 export function Downloads({
   queue,
-  ytdlp,
   onEnqueue,
   onCancel,
   onRemove,
   onClearFinished,
-  onInstallYtdlp,
   notify,
 }: DownloadsProps) {
   const { t } = useI18n();
@@ -69,6 +65,7 @@ export function Downloads({
   const [adding, setAdding] = useState(false);
   const [kind, setKind] = useState<MediaKind>("mp4");
   const [samples, setSamples] = useState<Record<number, number[]>>({});
+  const [queueExpanded, setQueueExpanded] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const active = queue.filter(
@@ -113,16 +110,17 @@ export function Downloads({
     });
   }, [queue]);
 
-  async function add() {
+  async function add(): Promise<boolean> {
     if (urls.length === 0) {
       inputRef.current?.focus();
-      return;
+      return false;
     }
-    if (adding) return;
+    if (adding) return false;
     setAdding(true);
     try {
-      await onEnqueue(urls, kind);
-      setText("");
+      const added = await onEnqueue(urls, kind);
+      if (added) setText("");
+      return added;
     } finally {
       setAdding(false);
     }
@@ -140,6 +138,26 @@ export function Downloads({
     }
   }
 
+  const formatOptions: RubberOption<MediaKind>[] = [
+    {
+      value: "mp4",
+      label: t("downloads.mp4"),
+      icon: <IconFilm size={16} />,
+      disabled: soundcloudOnly,
+    },
+    {
+      value: "webm",
+      label: t("downloads.webm"),
+      icon: <IconFilm size={16} />,
+      disabled: soundcloudOnly,
+    },
+    {
+      value: "mp3",
+      label: t("downloads.mp3"),
+      icon: <IconMusic size={16} />,
+    },
+  ];
+
   return (
     <div className="page">
       <header className="page-header">
@@ -155,7 +173,6 @@ export function Downloads({
       </header>
 
       <section className="card input-card">
-        <p className="section-label">{t("downloads.links")}</p>
         <textarea
           ref={inputRef}
           className="url-input"
@@ -172,60 +189,27 @@ export function Downloads({
           }}
         />
         <div className="download-row">
-          <div className="format-select" role="radiogroup" aria-label={t("downloads.format")}>
-            {(["mp4", "webm", "mp3"] as MediaKind[]).map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={kind === value}
-                className={`format-option ${kind === value ? "selected" : ""}`}
-                onClick={() => setKind(value)}
-                disabled={adding || (soundcloudOnly && value !== "mp3")}
-                title={
-                  soundcloudOnly && value !== "mp3" ? t("downloads.soundcloudHint") : undefined
-                }
-              >
-                {value === "mp3" ? <IconMusic size={16} /> : <IconFilm size={16} />}
-                {t(`downloads.${value}`)}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="btn btn-primary download-btn"
+          <RubberSegmented<MediaKind>
+            className="download-formats"
+            options={formatOptions}
+            value={kind}
+            onChange={setKind}
+            ariaLabel={t("downloads.format")}
             disabled={adding}
-            onClick={() => void add()}
-          >
-            <IconDownload size={16} />
-            {t("downloads.download")}
-          </button>
+            stretch
+          />
+          <LoadingSuccessButton
+            label={t("downloads.download")}
+            successLabel={t("status.done")}
+            icon={<IconDownload size={16} />}
+            disabled={adding}
+            onAction={add}
+          />
         </div>
         {soundcloudOnly && (
           <p className="download-note muted small">{t("downloads.soundcloudHint")}</p>
         )}
       </section>
-
-      {ytdlp.state !== "ready" && (
-        <section className={`banner ${ytdlp.state === "error" ? "banner-error" : ""}`}>
-          <div className="banner-icon">
-            <IconAlert size={18} />
-          </div>
-          <div className="banner-body">
-            <strong>
-              {ytdlp.state === "downloading" ? t("ytdlp.downloading") : t("ytdlp.missing.title")}
-            </strong>
-            <span>{ytdlp.state === "error" ? t("ytdlp.failed") : t("ytdlp.missing.text")}</span>
-            {ytdlp.state === "downloading" && <Meter value={ytdlp.percent ?? 0} />}
-            {ytdlp.error && <span className="mono">{ytdlp.error}</span>}
-          </div>
-          {ytdlp.state !== "downloading" && (
-            <button type="button" className="btn btn-primary" onClick={() => void onInstallYtdlp()}>
-              {ytdlp.state === "error" ? t("common.retry") : t("ytdlp.download")}
-            </button>
-          )}
-        </section>
-      )}
 
       <section className="queue">
         <div className="queue-header">
@@ -233,12 +217,23 @@ export function Downloads({
             {t("downloads.queue")}
             <span className="count">{queue.length}</span>
           </h2>
-          {finished > 0 && (
-            <button type="button" className="btn btn-ghost" onClick={() => void onClearFinished()}>
-              <IconTrash size={14} />
-              {t("downloads.clear")}
-            </button>
-          )}
+          <div className="queue-header-actions">
+            {queue.length > 1 && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setQueueExpanded((current) => !current)}
+              >
+                {queueExpanded ? t("downloads.collapse") : t("downloads.showAll")}
+              </button>
+            )}
+            {finished > 0 && (
+              <button type="button" className="btn btn-ghost" onClick={() => void onClearFinished()}>
+                <IconTrash size={14} />
+                {t("downloads.clear")}
+              </button>
+            )}
+          </div>
         </div>
 
         {queue.length === 0 ? (
@@ -252,23 +247,164 @@ export function Downloads({
             </div>
           </div>
         ) : (
-          <ul className="queue-list">
-            <AnimatePresence initial={false}>
-              {queue.map((item) => (
-                <QueueCard
-                  key={item.id}
-                  item={item}
-                  samples={samples[item.id] ?? []}
-                  onCancel={onCancel}
-                  onRemove={onRemove}
-                  onOpenFolder={openFolder}
-                />
-              ))}
-            </AnimatePresence>
-          </ul>
+          <QueueStack
+            queue={queue}
+            samples={samples}
+            expanded={queueExpanded}
+            onToggle={() => setQueueExpanded((current) => !current)}
+            onCancel={onCancel}
+            onRemove={onRemove}
+            onOpenFolder={openFolder}
+          />
         )}
       </section>
     </div>
+  );
+}
+
+const STACK_PEEK = 10;
+const STACK_VISIBLE_BEHIND = 2;
+const STACK_GAP = 8;
+const STACK_FALLBACK_HEIGHT = 78;
+
+function QueueStack({
+  queue,
+  samples,
+  expanded,
+  onToggle,
+  onCancel,
+  onRemove,
+  onOpenFolder,
+}: {
+  queue: QueueItem[];
+  samples: Record<number, number[]>;
+  expanded: boolean;
+  onToggle: () => void;
+  onCancel: (id: number) => Promise<void>;
+  onRemove: (id: number) => Promise<void>;
+  onOpenFolder: (item: QueueItem) => Promise<void>;
+}) {
+  const [heights, setHeights] = useState<Record<number, number>>({});
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const listRef = useRef<HTMLOListElement>(null);
+  const itemRefs = useRef(new Map<number, HTMLLIElement>());
+
+  const statusRank = (item: QueueItem) =>
+    item.status === "downloading" || item.status === "processing"
+      ? 0
+      : item.status === "queued"
+        ? 1
+        : 2;
+
+  const ordered = [...queue].sort((left, right) => {
+    const rank = statusRank(left) - statusRank(right);
+    if (rank !== 0) return rank;
+    return right.createdAt - left.createdAt;
+  });
+
+  const ids = queue.map((item) => item.id).join(",");
+  const expandedNow = (expanded || hovered || focused) && ordered.length > 1;
+  const heightOf = (id: number) => heights[id] ?? STACK_FALLBACK_HEIGHT;
+  const frontHeight = heightOf(ordered[0].id);
+
+  const offsets: number[] = [];
+  let running = 0;
+  for (const item of ordered) {
+    offsets.push(running);
+    running += heightOf(item.id) + STACK_GAP;
+  }
+
+  const stackHeight = expandedNow
+    ? Math.max(running - STACK_GAP, 0)
+    : frontHeight + Math.min(ordered.length - 1, STACK_VISIBLE_BEHIND) * STACK_PEEK;
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      setHeights((previous) => {
+        let next = previous;
+        itemRefs.current.forEach((element, id) => {
+          const height = Math.round(element.offsetHeight);
+          if (height && previous[id] !== height) {
+            if (next === previous) next = { ...previous };
+            next[id] = height;
+          }
+        });
+        return next;
+      });
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    itemRefs.current.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids]);
+
+  return (
+    <ol
+      className={`queue-stack ${expandedNow ? "expanded" : ""}`}
+      ref={listRef}
+      style={{ height: stackHeight }}
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") setHovered(true);
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "mouse") setHovered(false);
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setFocused(false);
+        }
+      }}
+    >
+      {ordered.map((item, index) => {
+        const depth = index;
+        const hiddenBehind = !expandedNow && depth > STACK_VISIBLE_BEHIND;
+        const scale = expandedNow ? 1 : 1 - depth * 0.05;
+        const y = expandedNow
+          ? offsets[index]
+          : frontHeight + depth * STACK_PEEK - heightOf(item.id) * scale;
+
+        return (
+          <li
+            key={item.id}
+            ref={(element) => {
+              if (element) itemRefs.current.set(item.id, element);
+              else itemRefs.current.delete(item.id);
+            }}
+            className={`queue-stack-item ${depth === 0 ? "front" : ""} ${
+              hiddenBehind ? "hidden-behind" : ""
+            }`}
+            style={{
+              transform: `translateY(${y}px) scale(${scale})`,
+              opacity: hiddenBehind ? 0 : 1,
+              zIndex: ordered.length - depth,
+              pointerEvents: hiddenBehind ? "none" : undefined,
+            }}
+          >
+            <div
+              className="queue-stack-body"
+              onClick={(event) => {
+                if (expandedNow || depth !== 0) return;
+                if ((event.target as Element).closest("button")) return;
+                onToggle();
+              }}
+            >
+              <QueueCard
+                item={item}
+                samples={samples[item.id] ?? []}
+                onCancel={onCancel}
+                onRemove={onRemove}
+                onOpenFolder={onOpenFolder}
+              />
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -301,14 +437,7 @@ function QueueCard({
           : "";
 
   return (
-    <motion.li
-      layout
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-      className={`queue-item status-${item.status}`}
-    >
+    <div className={`queue-item status-${item.status}`}>
       <div className="kind-badge">
         {item.kind === "mp3" ? <IconMusic size={17} /> : <IconFilm size={17} />}
       </div>
@@ -367,7 +496,7 @@ function QueueCard({
         {warn && (
           <div className="queue-warn">
             <strong>{warn.title}</strong>
-            {warn.reasons.length > 0 && <span>{warn.reasons.join(" В· ")}</span>}
+            {warn.reasons.length > 0 && <span>{warn.reasons.join(" · ")}</span>}
           </div>
         )}
       </div>
@@ -404,6 +533,6 @@ function QueueCard({
           </button>
         )}
       </div>
-    </motion.li>
+    </div>
   );
 }

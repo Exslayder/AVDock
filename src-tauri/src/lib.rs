@@ -215,6 +215,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             paths::migrate_legacy(app.handle());
+            paths::clean_tmp(app.handle());
             let loaded = settings::load(app.handle());
             apply_window_theme(app.handle(), &loaded.theme);
             app.manage(AppState::new(loaded));

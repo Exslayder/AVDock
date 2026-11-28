@@ -1,28 +1,32 @@
 ﻿# AVDock
 
 [![Release](https://img.shields.io/github/v/release/Exslayder/AVDock?style=flat-square)](https://github.com/Exslayder/AVDock/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-a855f7?style=flat-square)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=flat-square)
 ![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-1.77%2B-000000?style=flat-square&logo=rust&logoColor=white)
 
-Настольное приложение для Windows: скачивает видео и музыку с YouTube и SoundCloud и конвертирует медиа в популярные форматы.
+Настольное приложение для Windows для скачивания видео и аудио с **YouTube** и **SoundCloud**, а также конвертации медиафайлов в популярные форматы с аппаратным ускорением NVIDIA NVENC.
 
-AVDock — новая версия проекта `A_V_Downloader`: тот же движок загрузки (yt-dlp) и те же режимы, но вместо консольного меню интерфейс на Tauri 2 + React с Rust-бэкендом.
+AVDock — развитие проекта `A_V_Downloader` на базе **Tauri 2 + React 19 + Rust** с современным анимированным интерфейсом, встроенной очередью-стопкой, живым графиком скорости и автообновлением.
 
-Репозиторий: [github.com/Exslayder/AVDock](https://github.com/Exslayder/AVDock)
-Релизы: [github.com/Exslayder/AVDock/releases](https://github.com/Exslayder/AVDock/releases)
+- **Репозиторий:** [github.com/Exslayder/AVDock](https://github.com/Exslayder/AVDock)
+- **Релизы и загрузки:** [github.com/Exslayder/AVDock/releases](https://github.com/Exslayder/AVDock/releases)
+
+---
 
 ## Возможности
 
-- **Скачивание** — YouTube и SoundCloud, видео MP4/WEBM и аудио MP3 320 kbps.
-- **SoundCloud → MP3** — при вставке ссылки SoundCloud формат автоматически переключается на MP3, видеоформаты блокируются.
-- **Очередь** — несколько ссылок, последовательная обработка, прогресс, скорость, ETA, отмена.
-- **Конвертер** — видео в MP4, MKV, WEBM, MOV; аудио в MP3 320, M4A 256, WAV. H.264 идёт через NVIDIA NVENC с откатом на CPU, WEBM — VP9/Opus.
-- **Перетаскивание** — видео или аудио можно бросить прямо в область конвертера.
-- **Темы** — по умолчанию как в Windows; можно зафиксировать светлую или тёмную.
-- **Языки** — русский и английский.
-- **Обложки и теги** — MP3 с обложкой и метаданными ID3.
-- **Автообновления** — yt-dlp обновляется сам, AVDock — через GitHub Releases.
+- **Скачивание видео и музыки** — YouTube и SoundCloud в форматах `MP4`, `WEBM` и `MP3 (320 kbps)` с поддержкой плейлистов.
+- **SoundCloud → MP3** — при вставке ссылки на SoundCloud формат автоматически переключается на `MP3 · 320`, а видеоформаты блокируются.
+- **Обложки и ID3-теги** — автоматическое встраивание обложки и метаданных в `MP3`.
+- **Очередь-стопка (Notification Stack)** — активная загрузка отображается спереди с живым графиком скорости, прогрессом и ETA, а остальные карточки аккуратно сложены стопкой и раскрываются по наведению или кнопке «Показать все».
+- **Конвертер с NVENC и Drag & Drop** — конвертация видео (`MP4`, `MKV`, `WEBM`, `MOV`) и аудио (`MP3 320`, `M4A 256`, `WAV`). Для H.264 сначала используется аппаратный кодировщик `NVIDIA NVENC` с автоматическим откатом на `CPU (libx264)`, для WEBM — `VP9 + Opus`.
+- **Дизайн и анимации** — интерфейс в стиле ReactBits (локальные вариативные шрифты `Geist` и `Bricolage Grotesque`, aurora-фон, spotlight-карточки, интерактивное верхнее меню-пилюля и пружинные переключатели).
+- **Темы и языки** — системная, тёмная и светлая темы; русский и английский языки.
+- **Автообновление и чистота системы** — движок загрузок и само приложение обновляются автоматически (с ненавязчивым индикатором в углу экрана), а временные файлы в `data\tmp` автоматически очищаются при запуске и после завершения очереди.
+
+---
 
 ## Скриншоты
 
@@ -38,81 +42,93 @@ AVDock — новая версия проекта `A_V_Downloader`: тот же 
 
 ![Конвертер](docs/screenshots/converter-light.png)
 
+---
+
 ## Установка
 
-В каждом релизе два варианта:
+В каждом релизе на [GitHub Releases](https://github.com/Exslayder/AVDock/releases) публикуются две сборки:
 
-1. **Установочная версия** — `AVDock_x.y.z_x64-setup.exe`.
-   Ставится без прав администратора в `%LOCALAPPDATA%\Programs\AVDock`, создаёт ярлык в меню Пуск. ffmpeg уже внутри.
+1. **Установочная версия** — `AVDock_x.y.z_x64-setup.exe`
+   Ставится без прав администратора в `%LOCALAPPDATA%\Programs\AVDock`, создаёт ярлык в меню «Пуск». `ffmpeg` уже встроен в пакет.
+2. **Портативная версия** — `AVDock_x.y.z_portable.zip`
+   Распакуйте архив целиком в любую папку и запустите `AVDock.exe` (рядом должна оставаться папка `resources\ffmpeg.exe`).
 
-2. **Портативная версия** — `AVDock_x.y.z_portable.zip`.
-   Распаковать в любую папку и запустить `AVDock.exe`. Рядом должны лежать `resources\ffmpeg.exe` и появится папка `data`.
+> Инсталлятор не подписан коммерческим EV-сертификатом, поэтому при первом запуске Windows SmartScreen может показать предупреждение: нажмите **«Подробнее» → «Выполнить всё равно»**.
 
-Инсталлятор не подписан сертификатом, поэтому SmartScreen может показать предупреждение: «Подробнее» → «Выполнить всё равно».
+---
 
-## Где хранятся данные
+## Где хранятся данные и временные файлы
 
-Приложение старается держать всё рядом с собой:
+Приложение работает в портативно-дружелюбном режиме и держит все свои файлы в папке `data` рядом с `AVDock.exe`:
 
-- портативная версия — в папке `data` рядом с `AVDock.exe`;
-- установленная — в `%LOCALAPPDATA%\Programs\AVDock\data`;
-- если папка программы недоступна для записи (например, `Program Files`), используется `%APPDATA%\com.exslayder.avdock`.
+- **Портативная версия** — `<папка с AVDock.exe>\data`
+- **Установленная версия** — `%LOCALAPPDATA%\Programs\AVDock\data`
+- **Резервный путь** (если папка программы недоступна для записи, например в `Program Files`) — `%APPDATA%\com.exslayder.avdock`
 
-Внутри:
+Структура папки `data`:
 
+```text
+data\
+├─ settings.json      настройки приложения (папки, язык, тема, автообновление)
+├─ bin\yt-dlp.exe     движок загрузок (скачивается и обновляется автоматически)
+└─ tmp\               временные фрагменты активной загрузки
 ```
-data\settings.json      настройки
-data\bin\yt-dlp.exe     yt-dlp
-data\tmp\               временные файлы загрузки
-```
 
-## Обновления
+Папка `data\tmp` автоматически очищается при каждом старте приложения и сразу после завершения очереди загрузок, поэтому недокачанные фрагменты не накапливаются на диске.
 
-- **yt-dlp** проверяется при запуске и обновляется автоматически в `data\bin`. Это отдельный движок, он обновляется сам, без переустановки приложения.
-- **AVDock** раз в запуск проверяет GitHub Releases (если включено автообновление) и ставит новую версию через инсталлятор. Папка `data` при обновлении сохраняется.
-- Отключить автообновление можно в настройках; там же есть ручная проверка yt-dlp и AVDock.
+---
 
-## Стек
+## Автообновление
+
+- **Движок загрузок (`yt-dlp`)** проверяется при запуске приложения и автоматически скачивается или обновляется в `data\bin` с отображением прогресса в правом нижнем углу.
+- **AVDock** при включённом автообновлении проверяет `latest.json` в последнем релизе GitHub, скачивает подписанный пакет обновления и перезапускается. Пользовательские настройки в `data` при этом сохраняются.
+- В разделе **«Настройки → Обновления»** можно отключить автообновление при запуске или вручную проверить обновления движка и приложения.
+
+---
+
+## Технологический стек
 
 | Слой | Технология |
 |---|---|
-| UI | React 19 + TypeScript + Vite 8 |
-| Иконки | Lucide |
-| Анимации | Motion + anime.js |
+| Интерфейс | React 19 + TypeScript 5.9 + Vite 8 |
+| Шрифты | Geist Variable + Bricolage Grotesque Variable (локально через `@fontsource-variable`) |
+| Иконки | Lucide (`lucide-react`) |
+| Анимации | Motion (`motion/react`) + `anime.js` |
 | График скорости | Recharts |
-| Шрифт | системный: Segoe UI на Windows, SF Pro на macOS |
-| Оболочка | Rust + Tauri 2 |
-| Скачивание | `yt-dlp.exe` как отдельный процесс |
-| Медиа | `ffmpeg.exe` в ресурсах сборки |
+| Нативная оболочка | Tauri 2 + Rust (Tokio, Reqwest, Serde) |
+| Движок загрузок | `yt-dlp.exe` (управляется как дочерний процесс с парсингом прогресса) |
+| Кодирование медиа | `ffmpeg.exe` (H.264 NVENC / libx264, VP9, MP3 LAME, AAC, WAV PCM) |
 
-## Разработка
+---
 
-Требуется Rust (MSVC), Node.js 20+ и ffmpeg в `src-tauri/resources/ffmpeg.exe`.
+## Разработка и локальная сборка
+
+### Требования
+
+- **Windows 10 / 11 (x64)**
+- **Node.js 20+** и `npm`
+- **Rust (stable, MSVC)** — `1.77+`
+- Бинарник `ffmpeg.exe` в `src-tauri/resources/ffmpeg.exe` (скачивается скриптом)
+
+### Запуск в режиме разработки
 
 ```powershell
-cd F:\Python\tools\ai\opencode\avdock
 npm install
 
-# если ffmpeg ещё нет — скачать готовую сборку
+# Скачать ffmpeg.exe в src-tauri/resources/ffmpeg.exe (если ещё не скачан)
 powershell -ExecutionPolicy Bypass -File scripts/get-ffmpeg.ps1
 
 npm run tauri dev
 ```
 
-Проверки:
+### Проверка типов и фронтенда
 
 ```powershell
-npm run build                # tsc + vite
-cd src-tauri; cargo check    # Rust
+npm run build
+cd src-tauri; cargo check
 ```
 
-## Сборка
-
-```powershell
-npm run tauri build
-```
-
-Без ключа обновлений сборка создаст только инсталлятор. Для полного набора с файлами обновления:
+### Локальная релизная сборка
 
 ```powershell
 $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content .tauri-keys/avdock.key -Raw
@@ -120,67 +136,109 @@ $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
 npm run tauri build
 ```
 
-Результат:
+Готовые артефакты создаются в:
 
 - `src-tauri\target\release\bundle\nsis\AVDock_x.y.z_x64-setup.exe`
-- `src-tauri\target\release\bundle\nsis\AVDock_x.y.z_x64-setup.exe.sig` — подпись для автообновления
-- `src-tauri\target\release\avdock.exe` (для портативной сборки)
+- `src-tauri\target\release\bundle\nsis\AVDock_x.y.z_x64-setup.exe.sig`
+- `src-tauri\target\release\avdock.exe`
 
-Готовые файлы также копируются в `build\` (папка в `.gitignore`).
+---
 
-## Релиз
+## Выпуск релиза (CI/CD на GitHub Actions)
 
-1. Поднять версию в `package.json`, `src-tauri/Cargo.toml` и `src-tauri/tauri.conf.json`.
-2. Закоммитить и поставить тег:
+Официальные релизы собираются автоматически на **GitHub Actions** (`.github/workflows/release.yml`) в чистом окружении `windows-latest`:
+
+1. Обновите версию в трёх файлах:
+   - `package.json`
+   - `src-tauri/Cargo.toml`
+   - `src-tauri/tauri.conf.json`
+2. Закоммитьте изменения, создайте тег версии и отправьте в GitHub:
 
    ```powershell
-   git tag v0.1.0
+   git add -A
+   git commit -m "Release v0.2.0"
+   git tag v0.2.0
    git push origin main --tags
    ```
 
-3. GitHub Actions `Release` соберёт подписанный инсталлятор, обновление и портативный архив, затем создаст релиз с файлами:
-   - `AVDock_x.y.z_x64-setup.exe`
-   - `AVDock_x.y.z_x64-setup.exe.sig` — подпись обновления
-   - `AVDock_x.y.z_portable.zip`
-   - `latest.json` для автообновления
+3. Workflow **Release** автоматически:
+   - установит Node.js, Rust и скачает свежий `ffmpeg.exe`;
+   - соберёт и подпишет инсталлятор `AVDock_x.y.z_x64-setup.exe` (`.sig`);
+   - упакует портативный архив `AVDock_x.y.z_portable.zip`;
+   - сгенерирует манифест автообновления `latest.json`;
+   - опубликует готовый GitHub Release со всеми файлами.
 
-Workflow запускается по тегу `v*` или вручную через `workflow_dispatch`. Еженедельной сборки больше нет: приложение не нужно пересобирать по расписанию, а yt-dlp обновляется на стороне пользователя сам.
+Также сборку можно запустить вручную во вкладке **Actions → Release → Run workflow**, указав номер версии.
 
-Для CI в настройках репозитория должны быть секреты:
+### Секреты репозитория для подписи автообновлений
 
-- `TAURI_SIGNING_PRIVATE_KEY` — содержимое `.tauri-keys/avdock.key`;
-- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — пароль ключа (пустой, если ключ без пароля).
+В настройках репозитория (**Settings → Secrets and variables → Actions**) используются:
 
-Приватный ключ в репозиторий не попадает: папка `.tauri-keys` в `.gitignore`. Если ключ потерять, автообновления перестанут проверяться подписью.
+- `TAURI_SIGNING_PRIVATE_KEY` — содержимое приватного ключа `.tauri-keys/avdock.key`
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — пароль ключа (пустой, если ключ создан без пароля)
 
-Endpoint обновлений: `https://github.com/Exslayder/AVDock/releases/latest/download/latest.json`.
+> Папка `.tauri-keys/` добавлена в `.gitignore` и никогда не коммитится в репозиторий.
 
-## Структура
+---
 
-```
+## Структура проекта
+
+```text
 avdock/
-├─ src/                      React UI
-│  ├─ components/            Sidebar, Downloads, Converter, SettingsPage, SpeedChart
-│  ├─ lib/                   api.ts, i18n.tsx, format.ts, types.ts
-│  ├─ App.tsx
-│  └─ styles.css
-├─ src-tauri/
+├─ .github/workflows/
+│  └─ release.yml                CI/CD сборка и публикация релизов на GitHub Actions
+├─ docs/screenshots/             скриншоты интерфейса для README и релизов
+├─ public/
+│  └─ theme-init.js              ранняя инициализация темы без вспышки при старте
+├─ scripts/
+│  └─ get-ffmpeg.ps1             автоматическая загрузка ffmpeg.exe для сборки
+├─ src/                          фронтенд (React 19 + TypeScript)
+│  ├─ components/
+│  │  ├─ TopNav.tsx              интерактивное верхнее меню-пилюля с пружинной анимацией
+│  │  ├─ Downloads.tsx           ввод ссылок, выбор формата и очередь-стопка (QueueStack)
+│  │  ├─ Converter.tsx           Drag & Drop конвертер, кольцо прогресса и история
+│  │  ├─ SettingsPage.tsx        настройки папок, языка, темы и обновлений
+│  │  ├─ YtdlpToast.tsx          плавающий индикатор загрузки и статуса движка
+│  │  ├─ RubberSegmented.tsx     резиновый сегментированный переключатель
+│  │  ├─ LoadingSuccessButton.tsx кнопка с переходом Загрузка → Готово
+│  │  ├─ SpeedChart.tsx          живой график скорости загрузки
+│  │  ├─ Meter.tsx               индикатор прогресса
+│  │  └─ Icons.tsx               набор иконок
+│  ├─ lib/
+│  │  ├─ api.ts                  обёртки над командами и событиями Tauri
+│  │  ├─ format.ts               форматирование байтов, скорости, времени и ошибок
+│  │  ├─ i18n.tsx                локализация (RU / EN)
+│  │  └─ types.ts                общие TypeScript-типы
+│  ├─ styles/
+│  │  └─ reactbits.css           дизайн-система ReactBits (токены, стекло, aurora, spotlight)
+│  ├─ App.tsx                    корневой компонент, загрузка шрифтов и подписка на события
+│  ├─ main.tsx                   точка входа React и подключение локальных шрифтов
+│  └─ styles.css                 базовая разметка и стили компонентов
+├─ src-tauri/                    бэкенд (Rust + Tauri 2)
+│  ├─ capabilities/              разрешения Tauri 2 ACL
+│  ├─ icons/                     иконки приложения
+│  ├─ resources/                 ffmpeg.exe (игнорируется в git)
 │  ├─ src/
-│  │  ├─ lib.rs              команды Tauri и запуск
-│  │  ├─ state.rs            состояние, очередь, события
-│  │  ├─ queue.rs            последовательный воркер загрузок
-│  │  ├─ download.rs         запуск yt-dlp, разбор прогресса
-│  │  ├─ convert.rs          ffmpeg: форматы, NVENC/CPU, прогресс
-│  │  ├─ bins.rs             поиск и обновление yt-dlp, ffmpeg
-│  │  ├─ updates.rs          обновления yt-dlp и приложения
-│  │  ├─ paths.rs            data рядом с exe, откат в профиль
-│  │  └─ settings.rs         settings.json
-│  ├─ resources/             ffmpeg.exe (не хранится в git)
-│  ├─ capabilities/
+│  │  ├─ lib.rs                  регистрация команд Tauri и инициализация
+│  │  ├─ state.rs                состояние приложения, очередь и широковещательные события
+│  │  ├─ queue.rs                фоновый воркер очереди и автоочистка tmp
+│  │  ├─ download.rs             запуск движка загрузок и парсинг прогресса
+│  │  ├─ convert.rs              кодирование через ffmpeg (NVENC / CPU / VP9 / Audio)
+│  │  ├─ bins.rs                 управление бинарниками движка и ffmpeg
+│  │  ├─ updates.rs              проверка и установка обновлений движка и приложения
+│  │  ├─ paths.rs                портативная папка data, миграция и очистка data/tmp
+│  │  └─ settings.rs             чтение и сохранение settings.json
+│  ├─ Cargo.toml
 │  └─ tauri.conf.json
-├─ scripts/get-ffmpeg.ps1
-├─ public/theme-init.js
+├─ index.html
+├─ LICENSE                       лицензия MIT
 ├─ package.json
-└─ .github/workflows/release.yml
+├─ tsconfig.json
+└─ vite.config.ts
 ```
 
+---
+
+## Лицензия
+
+Проект распространяется под лицензией [MIT](LICENSE).

@@ -79,3 +79,19 @@ pub fn ensure_tmp(app: &AppHandle) -> Result<PathBuf, String> {
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     Ok(dir)
 }
+
+/// Removes fragments an interrupted download left in `data/tmp`. Safe at
+/// startup: the app is single-instance and nothing is downloading yet.
+pub fn clean_tmp(app: &AppHandle) {
+    let Ok(entries) = std::fs::read_dir(tmp_dir(app)) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            let _ = std::fs::remove_dir_all(path);
+        } else {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+}

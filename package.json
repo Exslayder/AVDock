@@ -1,7 +1,14 @@
 {
   "name": "avdock",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "description": "AVDock — desktop downloader and converter for YouTube and SoundCloud",
+  "license": "MIT",
+  "author": "Exslayder",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Exslayder/AVDock.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +17,8 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/geist": "^5.3.0",
     "@tauri-apps/api": "^2.12.5",
     "@tauri-apps/plugin-dialog": "^2.8.4",
     "@tauri-apps/plugin-opener": "^2.7.3",

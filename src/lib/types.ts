@@ -27,6 +27,7 @@ export interface QueueItem {
 }
 
 export type Lang = "ru" | "en";
+export type Page = "downloads" | "converter" | "settings";
 export type Theme = "light" | "dark" | "system";
 
 export interface Settings {
@@ -62,6 +63,14 @@ export interface ConvertProgress {
 }
 
 export type ConvertTarget = "mp4" | "mkv" | "webm" | "mov" | "mp3" | "m4a" | "wav";
+
+export interface ConversionRecord {
+  id: number;
+  name: string;
+  path: string;
+  target: ConvertTarget;
+  at: number;
+}
 
 export interface AppInfo {
   version: string;
