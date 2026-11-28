@@ -1,30 +1,34 @@
 ﻿# AVDock
 
-[![Release](https://img.shields.io/github/v/release/Exslayder/AVDock?style=flat-square)](https://github.com/Exslayder/AVDock/releases)
+[![Release](https://img.shields.io/badge/release-v0.2.0-a855f7?style=flat-square)](https://github.com/Exslayder/AVDock/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-a855f7?style=flat-square)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=flat-square)
+![YouTube](https://img.shields.io/badge/YouTube-MP4%20%7C%20WEBM%20%7C%20MP3-FF0000?style=flat-square&logo=youtube&logoColor=white)
+![SoundCloud](https://img.shields.io/badge/SoundCloud-MP3%20320%20kbps-FF5500?style=flat-square&logo=soundcloud&logoColor=white)
+![Converter](https://img.shields.io/badge/Converter-MP4%20%7C%20MKV%20%7C%20WEBM%20%7C%20MOV%20%7C%20MP3%20%7C%20M4A%20%7C%20WAV-10B981?style=flat-square&logo=ffmpeg&logoColor=white)
+![NVENC](https://img.shields.io/badge/GPU-NVIDIA%20NVENC-76B900?style=flat-square&logo=nvidia&logoColor=white)
 ![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white)
-![Rust](https://img.shields.io/badge/Rust-1.77%2B-000000?style=flat-square&logo=rust&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Rust](https://img.shields.io/badge/Rust-stable-000000?style=flat-square&logo=rust&logoColor=white)
 
-Настольное приложение для Windows для скачивания видео и аудио с **YouTube** и **SoundCloud**, а также конвертации медиафайлов в популярные форматы с аппаратным ускорением NVIDIA NVENC.
-
-AVDock — развитие проекта `A_V_Downloader` на базе **Tauri 2 + React 19 + Rust** с современным анимированным интерфейсом, встроенной очередью-стопкой, живым графиком скорости и автообновлением.
+Настольное приложение для Windows для скачивания видео и аудио с **YouTube** и **SoundCloud**, а также конвертации видео- и аудиофайлов в популярные форматы с аппаратным ускорением **NVIDIA NVENC**.
 
 - **Репозиторий:** [github.com/Exslayder/AVDock](https://github.com/Exslayder/AVDock)
-- **Релизы и загрузки:** [github.com/Exslayder/AVDock/releases](https://github.com/Exslayder/AVDock/releases)
+- **Скачать последнюю версию (v0.2.0):** [github.com/Exslayder/AVDock/releases/latest](https://github.com/Exslayder/AVDock/releases/latest)
 
 ---
 
 ## Возможности
 
-- **Скачивание видео и музыки** — YouTube и SoundCloud в форматах `MP4`, `WEBM` и `MP3 (320 kbps)` с поддержкой плейлистов.
-- **SoundCloud → MP3** — при вставке ссылки на SoundCloud формат автоматически переключается на `MP3 · 320`, а видеоформаты блокируются.
+- **Скачивание с YouTube и SoundCloud** — видео в форматах `MP4` и `WEBM`, аудио в `MP3 (320 kbps)`, поддержка одиночных роликов и плейлистов.
+- **Авторежим SoundCloud → MP3** — при вставке ссылки на SoundCloud формат автоматически переключается на `MP3 · 320`, а видеоформаты блокируются.
 - **Обложки и ID3-теги** — автоматическое встраивание обложки и метаданных в `MP3`.
-- **Очередь-стопка (Notification Stack)** — активная загрузка отображается спереди с живым графиком скорости, прогрессом и ETA, а остальные карточки аккуратно сложены стопкой и раскрываются по наведению или кнопке «Показать все».
-- **Конвертер с NVENC и Drag & Drop** — конвертация видео (`MP4`, `MKV`, `WEBM`, `MOV`) и аудио (`MP3 320`, `M4A 256`, `WAV`). Для H.264 сначала используется аппаратный кодировщик `NVIDIA NVENC` с автоматическим откатом на `CPU (libx264)`, для WEBM — `VP9 + Opus`.
-- **Дизайн и анимации** — интерфейс в стиле ReactBits (локальные вариативные шрифты `Geist` и `Bricolage Grotesque`, aurora-фон, spotlight-карточки, интерактивное верхнее меню-пилюля и пружинные переключатели).
-- **Темы и языки** — системная, тёмная и светлая темы; русский и английский языки.
-- **Автообновление и чистота системы** — движок загрузок и само приложение обновляются автоматически (с ненавязчивым индикатором в углу экрана), а временные файлы в `data\tmp` автоматически очищаются при запуске и после завершения очереди.
+- **Очередь-стопка** — активная загрузка отображается на переднем плане с живым графиком скорости, прогрессом и оставшимся временем (ETA), а остальные задачи аккуратно сложены стопкой и раскрываются по наведению или кнопке «Показать все».
+- **Конвертер видео и аудио (Drag & Drop + NVENC)** — перетащите файл в окно приложения и конвертируйте:
+  - **Видео:** `MP4`, `MKV`, `WEBM`, `MOV` (для `H.264` сначала используется аппаратный кодировщик `NVIDIA NVENC` с автоматическим откатом на `CPU libx264`; для `WEBM` — `VP9 + Opus`).
+  - **Аудио:** `MP3 (320 kbps)`, `M4A (AAC 256 kbps)`, `WAV (PCM 16-bit)`.
+- **Интерактивный интерфейс** — верхнее выдвижное меню-пилюля, пружинные переключатели форматов, локальные шрифты `Geist` и `Bricolage Grotesque`, системная, тёмная и светлая темы, русский и английский языки.
+- **Автообновление и чистота системы** — движок загрузок и само приложение обновляются автоматически (с компактным индикатором прогресса в правом нижнем углу), а временные файлы в `data\tmp` автоматически очищаются при запуске и после завершения очереди.
 
 ---
 
@@ -46,11 +50,11 @@ AVDock — развитие проекта `A_V_Downloader` на базе **Taur
 
 ## Установка
 
-В каждом релизе на [GitHub Releases](https://github.com/Exslayder/AVDock/releases) публикуются две сборки:
+В релизе [AVDock v0.2.0](https://github.com/Exslayder/AVDock/releases/latest) доступны две сборки:
 
-1. **Установочная версия** — `AVDock_x.y.z_x64-setup.exe`
+1. **Установочная версия** — `AVDock_0.2.0_x64-setup.exe`
    Ставится без прав администратора в `%LOCALAPPDATA%\Programs\AVDock`, создаёт ярлык в меню «Пуск». `ffmpeg` уже встроен в пакет.
-2. **Портативная версия** — `AVDock_x.y.z_portable.zip`
+2. **Портативная версия** — `AVDock_0.2.0_portable.zip`
    Распакуйте архив целиком в любую папку и запустите `AVDock.exe` (рядом должна оставаться папка `resources\ffmpeg.exe`).
 
 > Инсталлятор не подписан коммерческим EV-сертификатом, поэтому при первом запуске Windows SmartScreen может показать предупреждение: нажмите **«Подробнее» → «Выполнить всё равно»**.
@@ -59,7 +63,7 @@ AVDock — развитие проекта `A_V_Downloader` на базе **Taur
 
 ## Где хранятся данные и временные файлы
 
-Приложение работает в портативно-дружелюбном режиме и держит все свои файлы в папке `data` рядом с `AVDock.exe`:
+Приложение хранит все свои файлы в папке `data` рядом с `AVDock.exe`:
 
 - **Портативная версия** — `<папка с AVDock.exe>\data`
 - **Установленная версия** — `%LOCALAPPDATA%\Programs\AVDock\data`
@@ -69,18 +73,18 @@ AVDock — развитие проекта `A_V_Downloader` на базе **Taur
 
 ```text
 data\
-├─ settings.json      настройки приложения (папки, язык, тема, автообновление)
-├─ bin\yt-dlp.exe     движок загрузок (скачивается и обновляется автоматически)
+├─ settings.json      настройки приложения (папки сохранения, язык, тема, автообновление)
+├─ bin\               бинарник движка загрузок (скачивается и обновляется автоматически)
 └─ tmp\               временные фрагменты активной загрузки
 ```
 
-Папка `data\tmp` автоматически очищается при каждом старте приложения и сразу после завершения очереди загрузок, поэтому недокачанные фрагменты не накапливаются на диске.
+Папка `data\tmp` автоматически очищается при каждом старте приложения и сразу после завершения очереди загрузок, поэтому недокачанные фрагменты не остаются на диске.
 
 ---
 
 ## Автообновление
 
-- **Движок загрузок (`yt-dlp`)** проверяется при запуске приложения и автоматически скачивается или обновляется в `data\bin` с отображением прогресса в правом нижнем углу.
+- **Движок загрузок** проверяется при запуске приложения и автоматически устанавливается или обновляется в `data\bin` с отображением прогресса в правом нижнем углу.
 - **AVDock** при включённом автообновлении проверяет `latest.json` в последнем релизе GitHub, скачивает подписанный пакет обновления и перезапускается. Пользовательские настройки в `data` при этом сохраняются.
 - В разделе **«Настройки → Обновления»** можно отключить автообновление при запуске или вручную проверить обновления движка и приложения.
 
@@ -96,7 +100,6 @@ data\
 | Анимации | Motion (`motion/react`) + `anime.js` |
 | График скорости | Recharts |
 | Нативная оболочка | Tauri 2 + Rust (Tokio, Reqwest, Serde) |
-| Движок загрузок | `yt-dlp.exe` (управляется как дочерний процесс с парсингом прогресса) |
 | Кодирование медиа | `ffmpeg.exe` (H.264 NVENC / libx264, VP9, MP3 LAME, AAC, WAV PCM) |
 
 ---
@@ -107,7 +110,7 @@ data\
 
 - **Windows 10 / 11 (x64)**
 - **Node.js 20+** и `npm`
-- **Rust (stable, MSVC)** — `1.77+`
+- **Rust (stable, MSVC)**
 - Бинарник `ffmpeg.exe` в `src-tauri/resources/ffmpeg.exe` (скачивается скриптом)
 
 ### Запуск в режиме разработки
@@ -121,7 +124,7 @@ powershell -ExecutionPolicy Bypass -File scripts/get-ffmpeg.ps1
 npm run tauri dev
 ```
 
-### Проверка типов и фронтенда
+### Проверка типов и сборка фронтенда
 
 ```powershell
 npm run build
@@ -138,8 +141,8 @@ npm run tauri build
 
 Готовые артефакты создаются в:
 
-- `src-tauri\target\release\bundle\nsis\AVDock_x.y.z_x64-setup.exe`
-- `src-tauri\target\release\bundle\nsis\AVDock_x.y.z_x64-setup.exe.sig`
+- `src-tauri\target\release\bundle\nsis\AVDock_0.2.0_x64-setup.exe`
+- `src-tauri\target\release\bundle\nsis\AVDock_0.2.0_x64-setup.exe.sig`
 - `src-tauri\target\release\avdock.exe`
 
 ---
@@ -148,10 +151,7 @@ npm run tauri build
 
 Официальные релизы собираются автоматически на **GitHub Actions** (`.github/workflows/release.yml`) в чистом окружении `windows-latest`:
 
-1. Обновите версию в трёх файлах:
-   - `package.json`
-   - `src-tauri/Cargo.toml`
-   - `src-tauri/tauri.conf.json`
+1. Обновите версию в `package.json`, `src-tauri/Cargo.toml` и `src-tauri/tauri.conf.json` (а также не забудьте обновить тег версии в бейдже `README.md`).
 2. Закоммитьте изменения, создайте тег версии и отправьте в GitHub:
 
    ```powershell
@@ -163,8 +163,8 @@ npm run tauri build
 
 3. Workflow **Release** автоматически:
    - установит Node.js, Rust и скачает свежий `ffmpeg.exe`;
-   - соберёт и подпишет инсталлятор `AVDock_x.y.z_x64-setup.exe` (`.sig`);
-   - упакует портативный архив `AVDock_x.y.z_portable.zip`;
+   - соберёт и подпишет инсталлятор `AVDock_0.2.0_x64-setup.exe` (`.sig`);
+   - упакует портативный архив `AVDock_0.2.0_portable.zip`;
    - сгенерирует манифест автообновления `latest.json`;
    - опубликует готовый GitHub Release со всеми файлами.
 
@@ -210,7 +210,7 @@ avdock/
 │  │  ├─ i18n.tsx                локализация (RU / EN)
 │  │  └─ types.ts                общие TypeScript-типы
 │  ├─ styles/
-│  │  └─ reactbits.css           дизайн-система ReactBits (токены, стекло, aurora, spotlight)
+│  │  └─ reactbits.css           тема оформления (токены, стекло, aurora, spotlight)
 │  ├─ App.tsx                    корневой компонент, загрузка шрифтов и подписка на события
 │  ├─ main.tsx                   точка входа React и подключение локальных шрифтов
 │  └─ styles.css                 базовая разметка и стили компонентов
